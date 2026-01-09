@@ -1,0 +1,305 @@
+/* src/style.css */
+
+:root {
+  --bg: #0a0f1a;
+  --panel: #070b13;
+  --panel-2: #0b1220;
+  --panel-3: #0a0f1a;
+  --border: #222a3a;
+  --border-2: #2b2f36;
+
+  --text: #e5e7eb;
+  --muted: rgba(255, 255, 255, 0.7);
+  --muted-2: rgba(255, 255, 255, 0.6);
+
+  --btn: #121a2b;
+  --btn-2: #1a2332;
+  --btn-active: #0b1220;
+
+  --radius: 12px;
+  --radius-sm: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Shell */
+.app-shell {
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.app-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand-title {
+  font-weight: 800;
+  font-size: 22px;
+}
+
+.brand-subtitle {
+  opacity: 0.75;
+  margin-top: 4px;
+}
+
+.brand-meta {
+  opacity: var(--muted-2);
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+/* Nav */
+.nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nav-btn {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2);
+  background: var(--btn);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nav-btn--active {
+  background: var(--btn-active);
+  color: #fff;
+}
+
+/* Main Card */
+.main-card {
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  background: var(--panel-2);
+}
+
+.footer-tip {
+  opacity: 0.55;
+  margin-top: 14px;
+  font-size: 12px;
+}
+
+.code-pill {
+  background: #111827;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+/* Typography helpers */
+.h2 {
+  margin: 0 0 6px;
+}
+
+.muted {
+  opacity: 0.7;
+}
+
+.muted-sm {
+  opacity: 0.6;
+  font-size: 12px;
+}
+
+.spacer-10 {
+  height: 10px;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 14px 0;
+}
+
+/* Layout helpers */
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* Inputs */
+.textarea,
+.input,
+.select {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-2);
+  background: var(--panel-3);
+  color: var(--text);
+}
+
+.textarea {
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.textarea--h70 {
+  height: 70px;
+}
+
+.textarea--h110 {
+  height: 110px;
+}
+
+.textarea--h130 {
+  height: 130px;
+}
+
+/* Buttons */
+.btn {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2);
+  background: var(--btn);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn:disabled,
+.nav-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.btn--small {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--btn-2);
+  font-size: 12px;
+}
+
+.mini-btn {
+  width: 36px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2);
+  background: var(--btn);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+}
+
+.mini-btn--ghost {
+  background: transparent;
+}
+
+/* Panels */
+.panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  background: var(--panel);
+}
+
+.panel-title {
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.panel-title--700 {
+  font-weight: 700;
+}
+
+.label {
+  opacity: 0.75;
+  font-size: 12px;
+  margin: 8px 0 6px;
+}
+
+.preview {
+  white-space: pre-wrap;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  background: var(--panel-3);
+  padding: 12px;
+  min-height: 220px;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.preview--small {
+  min-height: 180px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+/* Structure rows */
+.claim-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.claim-index {
+  opacity: 0.7;
+  width: 26px;
+  text-align: right;
+  padding-top: 8px;
+}
+
+.claim-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

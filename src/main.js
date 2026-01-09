@@ -1,0 +1,848 @@
+// src/main.js
+import "./style.css";
+
+// Inkwise v1.4 — Presets + Download Exports + Session Export/Import
+// Intent → Structure → Expression → Draft (LinkedIn-optimized)
+
+const STORAGE_KEY = "inkwise:v1";
+const root = document.querySelector("#app");
+
+// --------- small compatibility helpers ----------
+const clone = (obj) => {
+  if (typeof structuredClone === "function") return structuredClone(obj);
+  return JSON.parse(JSON.stringify(obj));
+};
+
+const uuid = () => {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return "id-" + Math.random().toString(16).slice(2) + Date.now().toString(16);
+};
+
+const pad2 = (n) => String(n).padStart(2, "0");
+const fileStamp = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}_${pad2(d.getHours())}${pad2(
+    d.getMinutes()
+  )}${pad2(d.getSeconds())}`;
+};
+
+function clampInt(value, min, max, fallback) {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+// ---------- state ----------
+const DEFAULT_STATE = {
+  phase: "intent",
+  intent: "",
+  claims: [{ id: uuid(), text: "" }],
+  expressions: {}, // { [claimId]: string }
+
+  ui: {
+    presetId: "systems_coordination",
+  },
+
+  linkedin: {
+    hookOverride: "",
+
+    includeBullets: false,
+    bulletIntro: "Key points:",
+    maxBullets: 5,
+
+    includeCTA: true,
+    ctaText: "What would you change?",
+
+    includeHashtags: false,
+    hashtags: "#leadership #execution #systems",
+
+    includeSignature: false,
+    signature: "— Posted via Inkwise",
+  },
+};
+
+function sanitizeAndMergeState(maybeState) {
+  const candidate =
+    maybeState &&
+    typeof maybeState === "object" &&
+    maybeState.state &&
+    typeof maybeState.state === "object" &&
+    maybeState.version &&
+    String(maybeState.version).startsWith("inkwise:session:")
+      ? maybeState.state
+      : maybeState;
+
+  const parsed = candidate && typeof candidate === "object" ? candidate : {};
+
+  const merged = {
+    ...clone(DEFAULT_STATE),
+    ...parsed,
+    claims: Array.isArray(parsed.claims) && parsed.claims.length ? parsed.claims : clone(DEFAULT_STATE.claims),
+    expressions: parsed.expressions && typeof parsed.expressions === "object" ? parsed.expressions : {},
+    ui: {
+      ...clone(DEFAULT_STATE.ui),
+      ...(parsed.ui && typeof parsed.ui === "object" ? parsed.ui : {}),
+    },
+    linkedin: {
+      ...clone(DEFAULT_STATE.linkedin),
+      ...(parsed.linkedin && typeof parsed.linkedin === "object" ? parsed.linkedin : {}),
+    },
+  };
+
+  merged.claims = merged.claims.map((c) => ({
+    id: c && c.id ? c.id : uuid(),
+    text: c && typeof c.text === "string" ? c.text : "",
+  }));
+
+  merged.linkedin.maxBullets = clampInt(merged.linkedin.maxBullets, 1, 12, 5);
+
+  const allowed = new Set(["intent", "structure", "expression", "draft"]);
+  if (!allowed.has(merged.phase)) merged.phase = "intent";
+
+  return merged;
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return clone(DEFAULT_STATE);
+    return sanitizeAndMergeState(JSON.parse(raw));
+  } catch {
+    return clone(DEFAULT_STATE);
+  }
+}
+
+let state = loadState();
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function setState(patch, { rerender = true } = {}) {
+  state = { ...state, ...patch };
+  saveState();
+  if (rerender) render();
+}
+
+function replaceState(nextState, { rerender = true } = {}) {
+  state = sanitizeAndMergeState(nextState);
+  saveState();
+  if (rerender) render();
+}
+
+function setPhase(phase) {
+  setState({ phase }, { rerender: true });
+}
+
+function updateIntent(nextIntent) {
+  setState({ intent: nextIntent }, { rerender: false });
+}
+
+function updateClaim(claimId, nextText) {
+  const claims = state.claims.map((c) => (c.id === claimId ? { ...c, text: nextText } : c));
+  setState({ claims }, { rerender: false });
+}
+
+function addClaim() {
+  setState({ claims: [...state.claims, { id: uuid(), text: "" }] }, { rerender: true });
+}
+
+function removeClaim(claimId) {
+  const claims = state.claims.filter((c) => c.id !== claimId);
+  const expressions = { ...state.expressions };
+  delete expressions[claimId];
+
+  setState(
+    {
+      claims: claims.length ? claims : [{ id: uuid(), text: "" }],
+      expressions,
+    },
+    { rerender: true }
+  );
+}
+
+function moveClaim(claimId, direction) {
+  const index = state.claims.findIndex((c) => c.id === claimId);
+  if (index < 0) return;
+
+  const nextIndex = direction === "up" ? index - 1 : index + 1;
+  if (nextIndex < 0 || nextIndex >= state.claims.length) return;
+
+  const claims = [...state.claims];
+  const [item] = claims.splice(index, 1);
+  claims.splice(nextIndex, 0, item);
+  setState({ claims }, { rerender: true });
+}
+
+function updateExpression(claimId, nextText) {
+  setState({ expressions: { ...state.expressions, [claimId]: nextText } }, { rerender: false });
+}
+
+function updateLinkedInField(path, value, { rerender = false } = {}) {
+  setState({ linkedin: { ...state.linkedin, [path]: value } }, { rerender });
+}
+
+function updateUIField(path, value, { rerender = false } = {}) {
+  setState({ ui: { ...state.ui, [path]: value } }, { rerender });
+}
+
+function getActiveCount() {
+  return { nonEmptyClaims: state.claims.filter((c) => c.text.trim()).length };
+}
+
+// ---------- Draft builders ----------
+function getCleanClaims() {
+  return state.claims.map((c) => ({ ...c, text: (c.text || "").trim() })).filter((c) => c.text.length);
+}
+
+function getCleanParagraphs(claims) {
+  return claims.map((c) => (state.expressions[c.id] || "").trim()).filter(Boolean);
+}
+
+function buildLinkedInDraft() {
+  const intent = (state.intent || "").trim();
+  const cfg = state.linkedin;
+
+  const claims = getCleanClaims();
+  const paragraphs = getCleanParagraphs(claims);
+
+  const lines = [];
+
+  const hook = (cfg.hookOverride || "").trim() || intent;
+  if (hook) {
+    lines.push(hook);
+    lines.push("");
+  }
+
+  if (cfg.includeBullets && claims.length) {
+    const n = clampInt(cfg.maxBullets, 1, 12, 5);
+    const intro = (cfg.bulletIntro || "").trim();
+    if (intro) lines.push(intro);
+
+    claims.slice(0, n).forEach((c) => lines.push(`• ${c.text}`));
+    lines.push("");
+  }
+
+  if (paragraphs.length) {
+    for (const p of paragraphs) {
+      lines.push(p);
+      lines.push("");
+    }
+  } else if (!hook && claims.length) {
+    claims.slice(0, clampInt(cfg.maxBullets, 1, 12, 5)).forEach((c) => {
+      lines.push(c.text);
+      lines.push("");
+    });
+  } else if (!hook) {
+    lines.push("(Add intent/claims/expressions to generate a draft.)");
+    lines.push("");
+  }
+
+  if (cfg.includeCTA) {
+    const cta = (cfg.ctaText || "").trim();
+    if (cta) {
+      lines.push(cta);
+      lines.push("");
+    }
+  }
+
+  if (cfg.includeSignature) {
+    const sig = (cfg.signature || "").trim();
+    if (sig) {
+      lines.push(sig);
+      lines.push("");
+    }
+  }
+
+  if (cfg.includeHashtags) {
+    const tags = (cfg.hashtags || "").trim();
+    if (tags) {
+      lines.push(tags);
+      lines.push("");
+    }
+  }
+
+  return lines.join("\n").trim();
+}
+
+function buildFullBreakdown() {
+  const intent = (state.intent || "").trim();
+  const claims = getCleanClaims();
+  const paragraphs = getCleanParagraphs(claims);
+
+  const lines = [];
+
+  if (intent) {
+    lines.push("INTENT");
+    lines.push(intent);
+    lines.push("");
+  }
+
+  if (claims.length) {
+    lines.push("STRUCTURE");
+    claims.forEach((c) => lines.push(`• ${c.text}`));
+    lines.push("");
+  }
+
+  if (paragraphs.length) {
+    lines.push("EXPRESSION");
+    paragraphs.forEach((p) => {
+      lines.push(p);
+      lines.push("");
+    });
+  }
+
+  return lines.join("\n").trim();
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    alert("Copied to clipboard.");
+  } catch {
+    window.prompt("Copy this:", text);
+  }
+}
+
+function downloadTextFile(filename, text) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function downloadJsonFile(filename, obj) {
+  const text = JSON.stringify(obj, null, 2);
+  const blob = new Blob([text], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ---------- Session Export / Import ----------
+function exportSession() {
+  const payload = {
+    version: "inkwise:session:v1",
+    exportedAt: new Date().toISOString(),
+    state,
+  };
+  downloadJsonFile(`inkwise_session_${fileStamp()}.json`, payload);
+}
+
+async function importSessionFromFile(file) {
+  try {
+    const text = await file.text();
+    replaceState(JSON.parse(text), { rerender: true });
+    if (state.phase !== "draft") setPhase("draft");
+    alert("Session imported.");
+  } catch (err) {
+    console.error(err);
+    alert("Import failed. Make sure this is a valid Inkwise session .json file.");
+  }
+}
+
+// ---------- Quickstart Presets ----------
+function presetLabel(id) {
+  const map = {
+    systems_coordination: "Systems: Coordination Tax",
+    sf_homeless_spend: "Civic: Dollars → Outcomes",
+    ai_energy_wall: "AI: Inference Hits Infrastructure",
+    travel_trust: "Business: Trust > Hype (Travel)",
+  };
+  return map[id] || id;
+}
+
+function makePreset(name, { intent, claims, expressions, linkedin }) {
+  const claimObjs = claims.map((t) => ({ id: uuid(), text: t }));
+  const exprMap = {};
+  claimObjs.forEach((c, i) => {
+    exprMap[c.id] = expressions[i] || "";
+  });
+
+  return {
+    id: name,
+    label: presetLabel(name),
+    patch: {
+      intent,
+      claims: claimObjs.length ? claimObjs : [{ id: uuid(), text: "" }],
+      expressions: exprMap,
+      linkedin: {
+        ...state.linkedin,
+        ...(linkedin || {}),
+      },
+      ui: {
+        ...state.ui,
+        presetId: name,
+      },
+      phase: "draft",
+    },
+  };
+}
+
+const PRESETS = [
+  makePreset("systems_coordination", {
+    intent: "If your system needs constant coordination to function, it’s already failing.",
+    claims: [
+      "Coordination feels productive, but it often signals fragility.",
+      "Good systems degrade gracefully without heroics.",
+      "The fix is ownership + interfaces, not more meetings.",
+    ],
+    expressions: [
+      "Coordination can look like momentum because everyone is busy routing around gaps. But the busier the routing layer gets, the more you’re paying a hidden tax to keep the machine upright.",
+      "Strong systems don’t require heroic people to keep them standing. They have clear handoffs, obvious defaults, and predictable failure modes—so output stays acceptable even when someone is out.",
+      "The boring upgrade is the real one: assign an owner, define inputs/outputs, set a cadence, and write the “when this breaks” fallback. Meetings don’t scale. Interfaces do.",
+    ],
+    linkedin: { includeCTA: true, ctaText: "Where do you see coordination masquerading as execution?" },
+  }),
+  makePreset("sf_homeless_spend", {
+    intent: "The question isn’t moral. It’s mechanical: what happens to a dollar between appropriation and outcome?",
+    claims: [
+      "High spend doesn’t automatically produce visible results.",
+      "Complexity can absorb resources before they reach outcomes.",
+      "The right KPI is time-to-outcome, not dollars allocated.",
+    ],
+    expressions: [
+      "You can pour real money into a problem and still have the street-level reality look unchanged. That doesn’t prove bad intent—it proves the system between funding and outcomes matters more than the funding itself.",
+      "When a program becomes an ecosystem, complexity becomes a sponge. Layers of process, eligibility, handoffs, and vendors can absorb the value before it ever becomes a bed, a treatment slot, or a stabilized person.",
+      "The metric that should scare you is time-to-outcome. How long from appropriation to a measurable change? If it’s measured in years, the system is optimized for throughput—not resolution.",
+    ],
+    linkedin: { includeBullets: true, bulletIntro: "Three mechanical questions:", maxBullets: 3 },
+  }),
+  makePreset("ai_energy_wall", {
+    intent: "The bottleneck isn’t compute. It’s electricity.",
+    claims: [
+      "Training is a sprint; inference is a marathon through grids and permitting.",
+      "Interconnection queues + transmission timelines are the real constraint.",
+      "Winners will pair models with power strategy, not just GPUs.",
+    ],
+    expressions: [
+      "Everyone debates chips and model capability. But deploying intelligence at scale means running inference constantly—and that load has to go through physical infrastructure.",
+      "Interconnection queues, transmission buildout, and permitting timelines move on a multi-year clock. That clock doesn’t care how fast your model improves.",
+      "The competitive edge won’t just be better models. It will be securing power, siting compute intelligently, and engineering reliability as a first-class product constraint.",
+    ],
+    linkedin: { includeBullets: true, includeHashtags: true, hashtags: "#ai #infrastructure #energy #datacenters" },
+  }),
+  makePreset("travel_trust", {
+    intent: "In travel, trust is the product. The itinerary is the delivery vehicle.",
+    claims: [
+      "People don’t buy trips; they buy certainty.",
+      "Your system should reduce decisions, not add options.",
+      "Overdeliver quietly: clear expectations, clean handoffs, fast fixes.",
+    ],
+    expressions: [
+      "Most clients aren’t paying for flights and hotels—they’re paying to stop worrying. The real value is confidence: that someone competent is holding the details.",
+      "A good travel workflow narrows choices into a few strong options with tradeoffs explained. Too many options feels like homework, not service.",
+      "The brand is built in the moments that go wrong: quick rebooks, proactive updates, and calm accountability. Never oversell. Always overdeliver.",
+    ],
+    linkedin: { includeHashtags: true, hashtags: "#customerservice #systems #travel", includeSignature: true },
+  }),
+];
+
+function applyPreset(presetId) {
+  const preset = PRESETS.find((p) => p.id === presetId);
+  if (!preset) return;
+
+  const nextLinkedIn = { ...state.linkedin, ...(preset.patch.linkedin || {}) };
+
+  setState(
+    {
+      ...preset.patch,
+      linkedin: nextLinkedIn,
+      ui: { ...state.ui, presetId },
+      phase: "draft",
+    },
+    { rerender: true }
+  );
+}
+
+// ---------- UI ----------
+function navButton(phase, label) {
+  const active = state.phase === phase;
+  return `
+    <button
+      data-action="set-phase"
+      data-phase="${phase}"
+      class="nav-btn ${active ? "nav-btn--active" : ""}"
+    >${escapeHtml(label)}</button>
+  `;
+}
+
+function pageShell(contentHtml) {
+  const { nonEmptyClaims } = getActiveCount();
+
+  return `
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <div class="brand-title">Inkwise</div>
+          <div class="brand-subtitle">Intent → Structure → Expression</div>
+          <div class="brand-meta">Claims: ${nonEmptyClaims}/${state.claims.length} • Autosave: on</div>
+        </div>
+
+        <nav class="nav">
+          ${navButton("intent", "Intent")}
+          ${navButton("structure", "Structure")}
+          ${navButton("expression", "Expression")}
+          ${navButton("draft", "Draft")}
+        </nav>
+      </header>
+
+      <main class="main-card">
+        ${contentHtml}
+      </main>
+
+      <footer class="footer-tip">
+        Tip: Keep Terminal running with <code class="code-pill">npm run dev</code>
+      </footer>
+    </div>
+  `;
+}
+
+function renderIntent() {
+  return `
+    <h2 class="h2">Intent</h2>
+    <div class="muted">Define what you're trying to say before you say it.</div>
+
+    <div class="spacer-10"></div>
+
+    <textarea
+      data-field="intent"
+      placeholder="What are you trying to say?"
+      class="textarea textarea--h130"
+    >${escapeHtml(state.intent)}</textarea>
+
+    <div class="row" style="margin-top:12px;">
+      <button data-action="continue" data-next="structure" class="btn">Continue to Structure →</button>
+      <button data-action="reset" class="btn btn--ghost">Reset</button>
+    </div>
+  `;
+}
+
+function renderStructure() {
+  return `
+    <h2 class="h2">Structure</h2>
+    <div class="muted">Turn intent into ordered claims.</div>
+
+    <div class="spacer-10"></div>
+
+    <div class="stack">
+      ${state.claims
+        .map(
+          (c, idx) => `
+          <div class="claim-row">
+            <div class="claim-index">${idx + 1}.</div>
+
+            <textarea
+              data-field="claim"
+              data-claim-id="${c.id}"
+              placeholder="Claim (one clear point)"
+              class="textarea textarea--h70"
+              style="flex:1;"
+            >${escapeHtml(c.text)}</textarea>
+
+            <div class="claim-actions">
+              <button data-action="move-claim" data-claim-id="${c.id}" data-dir="up" class="mini-btn">↑</button>
+              <button data-action="move-claim" data-claim-id="${c.id}" data-dir="down" class="mini-btn">↓</button>
+              <button data-action="remove-claim" data-claim-id="${c.id}" class="mini-btn mini-btn--ghost">✕</button>
+            </div>
+          </div>
+        `
+        )
+        .join("")}
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <button data-action="add-claim" class="btn">+ Add claim</button>
+      <button data-action="continue" data-next="expression" class="btn">Continue to Expression →</button>
+    </div>
+  `;
+}
+
+function renderExpression() {
+  const claims = getCleanClaims();
+
+  if (!claims.length) {
+    return `
+      <h2 class="h2">Expression</h2>
+      <div class="muted">Translate each claim into prose.</div>
+
+      <div class="spacer-10"></div>
+
+      <div class="panel muted">Add at least one claim in Structure to write expressions.</div>
+
+      <div class="row" style="margin-top:12px;">
+        <button data-action="set-phase" data-phase="structure" class="btn">← Back to Structure</button>
+      </div>
+    `;
+  }
+
+  return `
+    <h2 class="h2">Expression</h2>
+    <div class="muted">Write the paragraphs that support your ordered claims.</div>
+
+    <div class="spacer-10"></div>
+
+    <div class="col">
+      ${claims
+        .map((c, idx) => {
+          const current = state.expressions[c.id] || "";
+          return `
+            <div class="panel">
+              <div class="panel-title--700">${idx + 1}. ${escapeHtml(c.text)}</div>
+              <textarea
+                data-field="expression"
+                data-claim-id="${c.id}"
+                placeholder="Write this as a clean paragraph…"
+                class="textarea textarea--h110"
+              >${escapeHtml(current)}</textarea>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <button data-action="continue" data-next="draft" class="btn">Continue to Draft →</button>
+    </div>
+  `;
+}
+
+function renderDraft() {
+  const li = buildLinkedInDraft();
+  const full = buildFullBreakdown();
+  const hasContent = li.trim().length > 0 && !li.includes("Add intent/claims/expressions");
+
+  const cfg = state.linkedin;
+
+  const presetOptions = PRESETS.map(
+    (p) => `<option value="${p.id}" ${state.ui.presetId === p.id ? "selected" : ""}>${escapeHtml(p.label)}</option>`
+  ).join("");
+
+  return `
+    <h2 class="h2">Draft</h2>
+    <div class="muted">LinkedIn-optimized output + controls + presets + exports.</div>
+
+    <div class="spacer-10"></div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">Quickstart Presets</div>
+
+        <div class="row">
+          <select data-field="ui-presetId" class="select">${presetOptions}</select>
+          <button data-action="load-preset" class="btn">Load Example</button>
+        </div>
+
+        <div class="muted-sm" style="margin-top:10px;">
+          Loads a complete example into Intent/Structure/Expression and jumps you to Draft.
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="panel-title">Session Backup</div>
+        <div class="row">
+          <button data-action="export-session" class="btn">Export Session (.json)</button>
+          <button data-action="import-session" class="btn">Import Session (.json)</button>
+          <input type="file" accept="application/json" data-field="session-file" style="display:none;" />
+        </div>
+        <div class="muted-sm" style="margin-top:10px;">
+          Export saves everything. Import restores it.
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="panel-title panel-title--700">LinkedIn Controls</div>
+
+        <div class="label">Hook override (optional)</div>
+        <textarea data-field="li-hookOverride" class="textarea textarea--h70" placeholder="If blank, uses Intent as the hook.">${escapeHtml(
+          cfg.hookOverride
+        )}</textarea>
+
+        <div class="spacer-10"></div>
+
+        ${checkboxRow("li-includeBullets", cfg.includeBullets, "Include bullet section")}
+        <div class="label">Bullet intro</div>
+        <input data-field="li-bulletIntro" value="${escapeHtml(cfg.bulletIntro)}" class="input" />
+        <div class="label">Max bullets</div>
+        <input data-field="li-maxBullets" value="${escapeHtml(cfg.maxBullets)}" inputmode="numeric" class="input" />
+
+        <div class="spacer-10"></div>
+
+        ${checkboxRow("li-includeCTA", cfg.includeCTA, "Include CTA")}
+        <div class="label">CTA text</div>
+        <input data-field="li-ctaText" value="${escapeHtml(cfg.ctaText)}" class="input" />
+
+        <div class="spacer-10"></div>
+
+        ${checkboxRow("li-includeHashtags", cfg.includeHashtags, "Include hashtags")}
+        <div class="label">Hashtags</div>
+        <input data-field="li-hashtags" value="${escapeHtml(cfg.hashtags)}" class="input" />
+
+        <div class="spacer-10"></div>
+
+        ${checkboxRow("li-includeSignature", cfg.includeSignature, "Include signature")}
+        <div class="label">Signature</div>
+        <input data-field="li-signature" value="${escapeHtml(cfg.signature)}" class="input" />
+
+        <div class="row" style="margin-top:12px;">
+          <button data-action="copy-linkedin" class="btn" ${!hasContent ? "disabled" : ""}>Copy LinkedIn</button>
+          <button data-action="download-linkedin" class="btn" ${!hasContent ? "disabled" : ""}>Download LinkedIn .txt</button>
+          <button data-action="download-full" class="btn" ${!hasContent ? "disabled" : ""}>Download Breakdown .txt</button>
+          <button data-action="set-phase" data-phase="expression" class="btn">← Back</button>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="panel">
+          <div class="row-between">
+            <div class="panel-title panel-title--700">LinkedIn Ready</div>
+            <div class="row">
+              <button data-action="copy-linkedin" class="btn btn--small" ${!hasContent ? "disabled" : ""}>Copy</button>
+              <button data-action="download-linkedin" class="btn btn--small" ${!hasContent ? "disabled" : ""}>Download</button>
+            </div>
+          </div>
+
+          <div class="preview">${escapeHtml(li || "(Add intent/claims/expressions to generate a draft.)")}</div>
+        </div>
+
+        <div class="panel">
+          <div class="row-between">
+            <div class="panel-title panel-title--700">Full Breakdown (for you)</div>
+            <div class="row">
+              <button data-action="copy-full" class="btn btn--small" ${!hasContent ? "disabled" : ""}>Copy</button>
+              <button data-action="download-full" class="btn btn--small" ${!hasContent ? "disabled" : ""}>Download</button>
+            </div>
+          </div>
+
+          <div class="preview preview--small">${escapeHtml(full || "")}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function checkboxRow(field, checked, label) {
+  return `
+    <label class="row" style="align-items:center; margin:6px 0;">
+      <input type="checkbox" data-field="${field}" ${checked ? "checked" : ""} />
+      <span>${escapeHtml(label)}</span>
+    </label>
+  `;
+}
+
+function renderPhase() {
+  if (state.phase === "intent") return renderIntent();
+  if (state.phase === "structure") return renderStructure();
+  if (state.phase === "expression") return renderExpression();
+  if (state.phase === "draft") return renderDraft();
+  return `<div>Unknown phase.</div>`;
+}
+
+function render() {
+  root.innerHTML = pageShell(renderPhase());
+}
+
+// ---------- helpers ----------
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+// ---------- events ----------
+root.addEventListener("click", async (e) => {
+  const target = e.target.closest("[data-action]");
+  if (!target) return;
+
+  const action = target.dataset.action;
+
+  if (action === "set-phase") return setPhase(target.dataset.phase);
+  if (action === "continue") return setPhase(target.dataset.next);
+
+  if (action === "reset") {
+    const ok = confirm("Reset everything? This clears saved work.");
+    if (!ok) return;
+    state = clone(DEFAULT_STATE);
+    saveState();
+    render();
+    return;
+  }
+
+  if (action === "add-claim") return addClaim();
+  if (action === "remove-claim") return removeClaim(target.dataset.claimId);
+  if (action === "move-claim") return moveClaim(target.dataset.claimId, target.dataset.dir);
+
+  if (action === "copy-linkedin") return copyToClipboard(buildLinkedInDraft());
+  if (action === "copy-full") return copyToClipboard(buildFullBreakdown());
+
+  if (action === "load-preset") return applyPreset(state.ui.presetId);
+
+  if (action === "download-linkedin") return downloadTextFile(`inkwise_linkedin_${fileStamp()}.txt`, buildLinkedInDraft());
+  if (action === "download-full") return downloadTextFile(`inkwise_breakdown_${fileStamp()}.txt`, buildFullBreakdown());
+
+  if (action === "export-session") return exportSession();
+
+  if (action === "import-session") {
+    const input = root.querySelector('input[data-field="session-file"]');
+    if (input) input.click();
+  }
+});
+
+root.addEventListener("input", (e) => {
+  const el = e.target;
+  const field = el.dataset.field;
+
+  if (field === "intent") return updateIntent(el.value);
+  if (field === "claim") return updateClaim(el.dataset.claimId, el.value);
+  if (field === "expression") return updateExpression(el.dataset.claimId, el.value);
+
+  if (!field) return;
+
+  if (field === "ui-presetId") return updateUIField("presetId", el.value, { rerender: false });
+
+  if (field === "li-hookOverride") return updateLinkedInField("hookOverride", el.value, { rerender: false });
+  if (field === "li-bulletIntro") return updateLinkedInField("bulletIntro", el.value, { rerender: false });
+  if (field === "li-maxBullets")
+    return updateLinkedInField("maxBullets", clampInt(el.value, 1, 12, 5), { rerender: false });
+  if (field === "li-ctaText") return updateLinkedInField("ctaText", el.value, { rerender: false });
+  if (field === "li-hashtags") return updateLinkedInField("hashtags", el.value, { rerender: false });
+  if (field === "li-signature") return updateLinkedInField("signature", el.value, { rerender: false });
+});
+
+root.addEventListener("change", async (e) => {
+  const el = e.target;
+  const field = el.dataset.field;
+  if (!field) return;
+
+  if (field === "session-file") {
+    const file = el.files && el.files[0];
+    el.value = "";
+    if (!file) return;
+    await importSessionFromFile(file);
+    return;
+  }
+
+  if (field === "li-includeBullets") return updateLinkedInField("includeBullets", !!el.checked, { rerender: true });
+  if (field === "li-includeCTA") return updateLinkedInField("includeCTA", !!el.checked, { rerender: true });
+  if (field === "li-includeHashtags") return updateLinkedInField("includeHashtags", !!el.checked, { rerender: true });
+  if (field === "li-includeSignature") return updateLinkedInField("includeSignature", !!el.checked, { rerender: true });
+});
+
+render();
