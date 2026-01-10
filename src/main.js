@@ -370,7 +370,10 @@ function buildDraftText(baseText) {
     const title = (state.intent || "").trim() || "Memo";
     const claims = getCleanClaims();
     const bulletPoints = claims.length
-      ? claims.slice(0, 5).map(c => `- ${c.text}`).join("\n")
+      ? claims
+          .slice(0, 5)
+          .map((c) => `- ${c.text}`)
+          .join("\n")
       : "- ";
     return `TITLE\n${title}\n\nTL;DR\n${bulletPoints}\n\nDETAILS\n${baseText.trim()}\n\nNEXT STEPS\n- `;
   }
@@ -590,10 +593,12 @@ function navButton(phase, label) {
 
 function pageShell(contentHtml) {
   const { nonEmptyClaims } = getActiveCount();
-  const currentProfile = OUTPUT_PROFILES[state.outputProfile] || OUTPUT_PROFILES.linkedin;
 
   const profileOptions = Object.entries(OUTPUT_PROFILES)
-    .map(([key, p]) => `<option value="${key}" ${state.outputProfile === key ? "selected" : ""}>${escapeHtml(p.label)}</option>`)
+    .map(
+      ([key, p]) =>
+        `<option value="${key}" ${state.outputProfile === key ? "selected" : ""}>${escapeHtml(p.label)}</option>`
+    )
     .join("");
 
   const profilePicker = `
@@ -800,7 +805,9 @@ function renderDraft() {
           Export saves everything. Import restores it.
         </div>
 
-        ${showLinkedInControls ? `
+        ${
+          showLinkedInControls
+            ? `
         <div class="divider"></div>
 
         <div class="panel-title panel-title--700">LinkedIn Controls</div>
@@ -835,7 +842,9 @@ function renderDraft() {
         ${checkboxRow("li-includeSignature", cfg.includeSignature, "Include signature")}
         <div class="label">Signature</div>
         <input data-field="li-signature" value="${escapeHtml(cfg.signature)}" class="input" />
-        ` : ""}
+        `
+            : ""
+        }
 
         <div class="row" style="margin-top:12px;">
           <button data-action="copy-draft" class="btn" ${!hasContent ? "disabled" : ""}>Copy ${escapeHtml(profile.label)}</button>
