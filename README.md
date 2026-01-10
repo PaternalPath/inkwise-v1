@@ -1,6 +1,6 @@
-# Inkwise — LinkedIn Draft Builder (Intent → Structure → Expression → Draft)
+# Inkwise — Writing OS (Intent → Structure → Expression → Draft)
 
-A lightweight, offline-first writing tool that turns rough ideas into LinkedIn-ready drafts using a clear, repeatable workflow.
+A lightweight, offline-first writing tool that turns rough ideas into platform-ready drafts using a clear, repeatable workflow. One workflow, multiple output targets.
 
 ## Why it exists
 Most writing tools either:
@@ -15,23 +15,33 @@ Inkwise is the middle path: **a structured workflow** that helps you think clear
 
 ## What it does
 ### Workflow
-1. **Intent** — what you’re trying to say (1–2 sentences)
+1. **Intent** — what you're trying to say (1–2 sentences)
 2. **Structure** — key claims / points you want to make
 3. **Expression** — tighten language and phrasing
-4. **Draft** — generate a LinkedIn-formatted post you can copy/export
+4. **Draft** — generate platform-ready output you can copy/export
+
+### Output Profiles
+Same workflow, different containers:
+- **LinkedIn Post** — short hook, whitespace, skimmable (3,000 chars)
+- **X / Twitter Thread** — auto-split into numbered posts (280 chars each)
+- **Email** — subject line + body
+- **Memo** — title, TL;DR, bullets, next steps
+- **Blog / Article** — markdown headings + longer paragraphs
+- **Custom** — your rules
 
 ### Features
 - Offline-first: saves sessions via `localStorage`
 - Copy/export flows for quick posting
 - Draft presets (hooks + formats)
-- Counters: LinkedIn character count, word count, estimated reading time
+- Live character counter per output profile
 - Clean formatting helpers for consistent spacing
 
 ## 60-second walkthrough
-1. Type your intent (1–2 sentences)
-2. Add 3–5 claims in Structure
-3. Refine phrasing in Expression
-4. Generate a draft → copy → post
+1. Select your output profile (LinkedIn, X Thread, Email, etc.)
+2. Type your intent (1–2 sentences)
+3. Add 3–5 claims in Structure
+4. Refine phrasing in Expression
+5. Generate a draft → copy → post
 
 
 ## Tech Stack
