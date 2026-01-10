@@ -303,3 +303,37 @@ body {
   flex-direction: column;
   gap: 8px;
 }
+
+/* Header right section */
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+/* Profile picker */
+.profile-picker {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.select--compact {
+  width: auto;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+/* Character counter */
+.char-count {
+  font-size: 12px;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.char-count--over {
+  color: #ef4444;
+  opacity: 1;
+  font-weight: 600;
+}

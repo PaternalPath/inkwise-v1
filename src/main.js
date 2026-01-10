@@ -32,12 +32,48 @@ function clampInt(value, min, max, fallback) {
   return Math.max(min, Math.min(max, n));
 }
 
+// ---------- Output Profiles ----------
+const OUTPUT_PROFILES = {
+  linkedin: {
+    label: "LinkedIn Post",
+    maxChars: 3000,
+    hint: "Short hook, whitespace, skimmable.",
+  },
+  xthread: {
+    label: "X / Twitter Thread",
+    maxChars: 25000,
+    chunkSize: 280,
+    hint: "Split into numbered posts (1/n).",
+  },
+  email: {
+    label: "Email",
+    maxChars: 20000,
+    hint: "Subject + body.",
+  },
+  memo: {
+    label: "Memo",
+    maxChars: 20000,
+    hint: "Title, TL;DR, bullets, next steps.",
+  },
+  blog: {
+    label: "Blog / Article",
+    maxChars: 100000,
+    hint: "Headings + longer paragraphs.",
+  },
+  custom: {
+    label: "Custom",
+    maxChars: 20000,
+    hint: "Your rules.",
+  },
+};
+
 // ---------- state ----------
 const DEFAULT_STATE = {
   phase: "intent",
   intent: "",
   claims: [{ id: uuid(), text: "" }],
   expressions: {}, // { [claimId]: string }
+  outputProfile: "linkedin",
 
   ui: {
     presetId: "systems_coordination",
@@ -98,6 +134,11 @@ function sanitizeAndMergeState(maybeState) {
 
   const allowed = new Set(["intent", "structure", "expression", "draft"]);
   if (!allowed.has(merged.phase)) merged.phase = "intent";
+
+  // Validate outputProfile
+  if (!OUTPUT_PROFILES[merged.outputProfile]) {
+    merged.outputProfile = "linkedin";
+  }
 
   return merged;
 }
@@ -295,6 +336,72 @@ function buildFullBreakdown() {
   return lines.join("\n").trim();
 }
 
+// ---------- Profile-aware draft formatting ----------
+function splitIntoThread(text, size = 280) {
+  const chunks = [];
+  let remaining = text.trim();
+
+  while (remaining.length > size) {
+    // Try to break on a newline or space
+    let cut = remaining.lastIndexOf("\n", size);
+    if (cut < 120) cut = remaining.lastIndexOf(" ", size);
+    if (cut < 120) cut = size;
+
+    chunks.push(remaining.slice(0, cut).trim());
+    remaining = remaining.slice(cut).trim();
+  }
+  if (remaining) chunks.push(remaining);
+
+  // Add numbering (1/n format)
+  const n = chunks.length;
+  return chunks.map((c, i) => `${i + 1}/${n}\n${c}`);
+}
+
+function buildDraftText(baseText) {
+  const profile = state.outputProfile;
+  const p = OUTPUT_PROFILES[profile];
+
+  if (profile === "email") {
+    const subject = (state.linkedin?.hookOverride || "").trim() || (state.intent || "").trim() || "Quick note";
+    return `Subject: ${subject}\n\n${baseText.trim()}`;
+  }
+
+  if (profile === "memo") {
+    const title = (state.intent || "").trim() || "Memo";
+    const claims = getCleanClaims();
+    const bulletPoints = claims.length
+      ? claims.slice(0, 5).map(c => `- ${c.text}`).join("\n")
+      : "- ";
+    return `TITLE\n${title}\n\nTL;DR\n${bulletPoints}\n\nDETAILS\n${baseText.trim()}\n\nNEXT STEPS\n- `;
+  }
+
+  if (profile === "xthread") {
+    return splitIntoThread(baseText, p.chunkSize || 280).join("\n\n---\n\n");
+  }
+
+  if (profile === "blog") {
+    const title = (state.intent || "").trim();
+    const claims = getCleanClaims();
+    let output = "";
+    if (title) output += `# ${title}\n\n`;
+
+    // Use claims as section headers if we have expressions
+    const paragraphs = getCleanParagraphs(claims);
+    if (paragraphs.length && claims.length) {
+      claims.forEach((c, i) => {
+        output += `## ${c.text}\n\n`;
+        if (paragraphs[i]) output += `${paragraphs[i]}\n\n`;
+      });
+    } else {
+      output += baseText.trim();
+    }
+    return output.trim();
+  }
+
+  // linkedin, custom: return base text as-is
+  return baseText;
+}
+
 async function copyToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
@@ -483,6 +590,20 @@ function navButton(phase, label) {
 
 function pageShell(contentHtml) {
   const { nonEmptyClaims } = getActiveCount();
+  const currentProfile = OUTPUT_PROFILES[state.outputProfile] || OUTPUT_PROFILES.linkedin;
+
+  const profileOptions = Object.entries(OUTPUT_PROFILES)
+    .map(([key, p]) => `<option value="${key}" ${state.outputProfile === key ? "selected" : ""}>${escapeHtml(p.label)}</option>`)
+    .join("");
+
+  const profilePicker = `
+    <label class="profile-picker">
+      <span class="muted">Output</span>
+      <select data-action="set-output-profile" class="select select--compact">
+        ${profileOptions}
+      </select>
+    </label>
+  `;
 
   return `
     <div class="app-shell">
@@ -493,12 +614,15 @@ function pageShell(contentHtml) {
           <div class="brand-meta">Claims: ${nonEmptyClaims}/${state.claims.length} • Autosave: on</div>
         </div>
 
-        <nav class="nav">
-          ${navButton("intent", "Intent")}
-          ${navButton("structure", "Structure")}
-          ${navButton("expression", "Expression")}
-          ${navButton("draft", "Draft")}
-        </nav>
+        <div class="header-right">
+          ${profilePicker}
+          <nav class="nav">
+            ${navButton("intent", "Intent")}
+            ${navButton("structure", "Structure")}
+            ${navButton("expression", "Expression")}
+            ${navButton("draft", "Draft")}
+          </nav>
+        </div>
       </header>
 
       <main class="main-card">
@@ -622,19 +746,32 @@ function renderExpression() {
 }
 
 function renderDraft() {
-  const li = buildLinkedInDraft();
+  const baseDraft = buildLinkedInDraft();
+  const formattedDraft = buildDraftText(baseDraft);
   const full = buildFullBreakdown();
-  const hasContent = li.trim().length > 0 && !li.includes("Add intent/claims/expressions");
+  const hasContent = baseDraft.trim().length > 0 && !baseDraft.includes("Add intent/claims/expressions");
 
   const cfg = state.linkedin;
+  const profile = OUTPUT_PROFILES[state.outputProfile] || OUTPUT_PROFILES.linkedin;
+  const profileKey = state.outputProfile;
+
+  // Character counter
+  const charCount = formattedDraft.length;
+  const maxChars = profile.maxChars;
+  const isOverLimit = charCount > maxChars;
+  const charCountClass = isOverLimit ? "char-count char-count--over" : "char-count";
 
   const presetOptions = PRESETS.map(
     (p) => `<option value="${p.id}" ${state.ui.presetId === p.id ? "selected" : ""}>${escapeHtml(p.label)}</option>`
   ).join("");
 
+  // Show LinkedIn controls only for linkedin profile
+  const showLinkedInControls = profileKey === "linkedin";
+
   return `
     <h2 class="h2">Draft</h2>
-    <div class="muted">LinkedIn-optimized output + controls + presets + exports.</div>
+    <div class="muted">${escapeHtml(profile.label)} output + controls + presets + exports.</div>
+    <div class="muted-sm" style="margin-top:4px;">${escapeHtml(profile.hint)}</div>
 
     <div class="spacer-10"></div>
 
@@ -663,6 +800,7 @@ function renderDraft() {
           Export saves everything. Import restores it.
         </div>
 
+        ${showLinkedInControls ? `
         <div class="divider"></div>
 
         <div class="panel-title panel-title--700">LinkedIn Controls</div>
@@ -697,11 +835,12 @@ function renderDraft() {
         ${checkboxRow("li-includeSignature", cfg.includeSignature, "Include signature")}
         <div class="label">Signature</div>
         <input data-field="li-signature" value="${escapeHtml(cfg.signature)}" class="input" />
+        ` : ""}
 
         <div class="row" style="margin-top:12px;">
-          <button data-action="copy-linkedin" class="btn" ${!hasContent ? "disabled" : ""}>Copy LinkedIn</button>
-          <button data-action="download-linkedin" class="btn" ${!hasContent ? "disabled" : ""}>Download LinkedIn .txt</button>
-          <button data-action="download-full" class="btn" ${!hasContent ? "disabled" : ""}>Download Breakdown .txt</button>
+          <button data-action="copy-draft" class="btn" ${!hasContent ? "disabled" : ""}>Copy ${escapeHtml(profile.label)}</button>
+          <button data-action="download-draft" class="btn" ${!hasContent ? "disabled" : ""}>Download .txt</button>
+          <button data-action="download-full" class="btn" ${!hasContent ? "disabled" : ""}>Download Breakdown</button>
           <button data-action="set-phase" data-phase="expression" class="btn">← Back</button>
         </div>
       </div>
@@ -709,14 +848,15 @@ function renderDraft() {
       <div class="col">
         <div class="panel">
           <div class="row-between">
-            <div class="panel-title panel-title--700">LinkedIn Ready</div>
-            <div class="row">
-              <button data-action="copy-linkedin" class="btn btn--small" ${!hasContent ? "disabled" : ""}>Copy</button>
-              <button data-action="download-linkedin" class="btn btn--small" ${!hasContent ? "disabled" : ""}>Download</button>
+            <div class="panel-title panel-title--700">${escapeHtml(profile.label)} Ready</div>
+            <div class="row" style="gap:12px; align-items:center;">
+              <span class="${charCountClass}">${charCount.toLocaleString()} / ${maxChars.toLocaleString()}</span>
+              <button data-action="copy-draft" class="btn btn--small" ${!hasContent ? "disabled" : ""}>Copy</button>
+              <button data-action="download-draft" class="btn btn--small" ${!hasContent ? "disabled" : ""}>Download</button>
             </div>
           </div>
 
-          <div class="preview">${escapeHtml(li || "(Add intent/claims/expressions to generate a draft.)")}</div>
+          <div class="preview">${escapeHtml(formattedDraft || "(Add intent/claims/expressions to generate a draft.)")}</div>
         </div>
 
         <div class="panel">
@@ -789,12 +929,15 @@ root.addEventListener("click", async (e) => {
   if (action === "remove-claim") return removeClaim(target.dataset.claimId);
   if (action === "move-claim") return moveClaim(target.dataset.claimId, target.dataset.dir);
 
-  if (action === "copy-linkedin") return copyToClipboard(buildLinkedInDraft());
+  if (action === "copy-draft") return copyToClipboard(buildDraftText(buildLinkedInDraft()));
   if (action === "copy-full") return copyToClipboard(buildFullBreakdown());
 
   if (action === "load-preset") return applyPreset(state.ui.presetId);
 
-  if (action === "download-linkedin") return downloadTextFile(`inkwise_linkedin_${fileStamp()}.txt`, buildLinkedInDraft());
+  if (action === "download-draft") {
+    const profileKey = state.outputProfile || "linkedin";
+    return downloadTextFile(`inkwise_${profileKey}_${fileStamp()}.txt`, buildDraftText(buildLinkedInDraft()));
+  }
   if (action === "download-full") return downloadTextFile(`inkwise_breakdown_${fileStamp()}.txt`, buildFullBreakdown());
 
   if (action === "export-session") return exportSession();
@@ -828,6 +971,13 @@ root.addEventListener("input", (e) => {
 
 root.addEventListener("change", async (e) => {
   const el = e.target;
+
+  // Handle output profile dropdown
+  if (el?.dataset?.action === "set-output-profile") {
+    setState({ outputProfile: el.value });
+    return;
+  }
+
   const field = el.dataset.field;
   if (!field) return;
 
