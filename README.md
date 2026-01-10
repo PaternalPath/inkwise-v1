@@ -10,8 +10,8 @@ Most writing tools either:
 Inkwise is the middle path: **a structured workflow** that helps you think clearly, write faster, and ship consistently — with **no account required** and **local persistence**.
 
 ## Live Demo
-- Demo: [LIVE_URL_HERE]
-- Repo: [GITHUB_REPO_URL_HERE]
+- Demo: [inkwise-v1.vercel.app](https://inkwise-v1.vercel.app)
+- Repo: [github.com/PaternalPath/inkwise-v1](https://github.com/PaternalPath/inkwise-v1)
 
 ## What it does
 ### Workflow
