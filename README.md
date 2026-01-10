@@ -10,8 +10,8 @@ Most writing tools either:
 Inkwise is the middle path: **a structured workflow** that helps you think clearly, write faster, and ship consistently — with **no account required** and **local persistence**.
 
 ## Live Demo
-- Demo: [LIVE_URL_HERE]
-- Repo: [GITHUB_REPO_URL_HERE]
+- Demo: [inkwise-v1.vercel.app](https://inkwise-v1.vercel.app)
+- Repo: [github.com/PaternalPath/inkwise-v1](https://github.com/PaternalPath/inkwise-v1)
 
 ## What it does
 ### Workflow
@@ -47,7 +47,34 @@ Same workflow, different containers:
 ## Tech Stack
 - Vite + Vanilla JS
 - Local persistence (localStorage)
-- [Any additional libs here]
+- Vitest for testing
+- ESLint + Prettier for code quality
+- GitHub Actions CI
+
+## Quality
+
+This project includes automated quality checks:
+
+- **Linting**: ESLint with recommended rules
+- **Formatting**: Prettier for consistent code style
+- **Testing**: Vitest with 19+ unit tests
+- **CI**: GitHub Actions runs on every PR and push to main
+
+### Run locally
+
+```bash
+# Lint
+npm run lint
+
+# Format
+npm run format
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+```
 
 ## Getting Started (Local)
 ```bash

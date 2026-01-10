@@ -48,7 +48,9 @@ body {
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
-  font-feature-settings: "kern" 1, "liga" 1;
+  font-feature-settings:
+    "kern" 1,
+    "liga" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--bg);
@@ -256,7 +258,9 @@ body {
   border: 1px solid var(--border);
   background: var(--bg-input);
   color: var(--text);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .textarea::placeholder,
