@@ -1,23 +1,39 @@
-/* src/style.css */
+/* src/style.css — Apple Clean Dark */
 
 :root {
-  --bg: #0a0f1a;
-  --panel: #070b13;
-  --panel-2: #0b1220;
-  --panel-3: #0a0f1a;
-  --border: #222a3a;
-  --border-2: #2b2f36;
+  /* Backgrounds */
+  --bg: #000000;
+  --bg-elevated: #1c1c1e;
+  --bg-grouped: #2c2c2e;
+  --bg-input: #1c1c1e;
 
-  --text: #e5e7eb;
-  --muted: rgba(255, 255, 255, 0.7);
-  --muted-2: rgba(255, 255, 255, 0.6);
+  /* Glass effect */
+  --glass: rgba(44, 44, 46, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.08);
 
-  --btn: #121a2b;
-  --btn-2: #1a2332;
-  --btn-active: #0b1220;
+  /* Text */
+  --text: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-tertiary: rgba(255, 255, 255, 0.4);
 
-  --radius: 12px;
-  --radius-sm: 10px;
+  /* Accent */
+  --accent: #0a84ff;
+  --accent-hover: #409cff;
+
+  /* Borders & Dividers */
+  --separator: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.12);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  /* Radius - Apple uses generous rounding */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 20px;
 }
 
 * {
@@ -31,109 +47,162 @@ body {
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+  font-feature-settings: "kern" 1, "liga" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background: var(--bg);
   color: var(--text);
+  line-height: 1.47;
+  letter-spacing: -0.022em;
 }
 
-/* Shell */
+/* ============================================
+   SHELL & LAYOUT
+   ============================================ */
+
 .app-shell {
   min-height: 100vh;
-  padding: 28px;
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .app-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
   flex-wrap: wrap;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--separator);
+  margin-bottom: 24px;
 }
 
+/* Brand */
 .brand-title {
-  font-weight: 800;
-  font-size: 22px;
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: -0.03em;
 }
 
 .brand-subtitle {
-  opacity: 0.75;
+  color: var(--text-secondary);
   margin-top: 4px;
+  font-size: 15px;
+  font-weight: 400;
 }
 
 .brand-meta {
-  opacity: var(--muted-2);
+  color: var(--text-tertiary);
   margin-top: 8px;
   font-size: 13px;
 }
 
-/* Nav */
+/* Header right section */
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+/* ============================================
+   NAVIGATION - Segmented Control Style
+   ============================================ */
+
 .nav {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 2px;
+  background: var(--bg-grouped);
+  padding: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .nav-btn {
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-2);
-  background: var(--btn);
-  color: rgba(255, 255, 255, 0.85);
+  padding: 8px 16px;
+  border-radius: var(--radius-xs);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+  color: var(--text);
 }
 
 .nav-btn--active {
-  background: var(--btn-active);
-  color: #fff;
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
 }
 
-/* Main Card */
+/* ============================================
+   MAIN CONTENT CARD
+   ============================================ */
+
 .main-card {
-  margin-top: 18px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px;
-  background: var(--panel-2);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--glass-border);
 }
 
 .footer-tip {
-  opacity: 0.55;
-  margin-top: 14px;
-  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 16px;
+  font-size: 13px;
+  text-align: center;
 }
 
 .code-pill {
-  background: #111827;
-  padding: 2px 6px;
+  background: var(--bg-grouped);
+  padding: 3px 8px;
   border-radius: 6px;
-}
-
-/* Typography helpers */
-.h2 {
-  margin: 0 0 6px;
-}
-
-.muted {
-  opacity: 0.7;
-}
-
-.muted-sm {
-  opacity: 0.6;
+  font-family: "SF Mono", ui-monospace, monospace;
   font-size: 12px;
 }
 
+/* ============================================
+   TYPOGRAPHY
+   ============================================ */
+
+.h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.muted {
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.muted-sm {
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
 .spacer-10 {
-  height: 10px;
+  height: 12px;
 }
 
 .divider {
   height: 1px;
-  background: var(--border);
-  margin: 14px 0;
+  background: var(--separator);
+  margin: 20px 0;
 }
 
-/* Layout helpers */
+/* ============================================
+   LAYOUT HELPERS
+   ============================================ */
+
 .row {
   display: flex;
   gap: 10px;
@@ -144,196 +213,361 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .col {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 20px;
   align-items: start;
 }
 
-/* Inputs */
+@media (max-width: 800px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================
+   FORM INPUTS - iOS Style
+   ============================================ */
+
 .textarea,
 .input,
 .select {
   width: 100%;
-  padding: 10px;
-  font-size: 14px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border-2);
-  background: var(--panel-3);
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
   color: var(--text);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.textarea::placeholder,
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.textarea:focus,
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.25);
 }
 
 .textarea {
   resize: vertical;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .textarea--h70 {
-  height: 70px;
+  height: 76px;
 }
 
 .textarea--h110 {
-  height: 110px;
+  height: 120px;
 }
 
 .textarea--h130 {
-  height: 130px;
+  height: 140px;
 }
 
-/* Buttons */
-.btn {
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-2);
-  background: var(--btn);
-  color: var(--text);
+.select {
   cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='rgba(255,255,255,0.5)' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.select--compact {
+  width: auto;
+  padding: 8px 32px 8px 12px;
+  font-size: 14px;
+}
+
+/* ============================================
+   BUTTONS - iOS Style
+   ============================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--bg-grouped);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
   white-space: nowrap;
+}
+
+.btn:hover {
+  background: #3a3a3c;
+}
+
+.btn:active {
+  transform: scale(0.98);
 }
 
 .btn:disabled,
 .nav-btn:disabled {
-  opacity: 0.45;
+  opacity: 0.35;
   cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn--primary:hover {
+  background: var(--accent-hover);
 }
 
 .btn--ghost {
   background: transparent;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary);
+}
+
+.btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
 }
 
 .btn--small {
   padding: 6px 12px;
-  border-radius: 8px;
-  background: var(--btn-2);
-  font-size: 12px;
+  font-size: 13px;
+  border-radius: var(--radius-xs);
 }
 
 .mini-btn {
   width: 36px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-2);
-  background: var(--btn);
-  color: rgba(255, 255, 255, 0.85);
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  border: none;
+  background: var(--bg-grouped);
+  color: var(--text-secondary);
+  font-size: 16px;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mini-btn:hover {
+  background: #3a3a3c;
+  color: var(--text);
 }
 
 .mini-btn--ghost {
   background: transparent;
 }
 
-/* Panels */
+.mini-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ============================================
+   PANELS - iOS Grouped Style
+   ============================================ */
+
 .panel {
-  border: 1px solid var(--border);
+  background: var(--bg-grouped);
   border-radius: var(--radius);
-  padding: 12px;
-  background: var(--panel);
+  padding: 16px;
+  border: 1px solid var(--glass-border);
 }
 
 .panel-title {
-  font-weight: 800;
-  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
 }
 
 .panel-title--700 {
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
 
 .label {
-  opacity: 0.75;
-  font-size: 12px;
-  margin: 8px 0 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin: 12px 0 6px;
 }
 
+/* Preview - Code/Output area */
 .preview {
   white-space: pre-wrap;
-  border: 1px solid var(--border-2);
-  border-radius: var(--radius);
-  background: var(--panel-3);
-  padding: 12px;
-  min-height: 220px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  min-height: 240px;
   line-height: 1.6;
   font-size: 14px;
+  color: var(--text);
 }
 
 .preview--small {
   min-height: 180px;
-  font-size: 12.5px;
-  line-height: 1.5;
-  opacity: 0.9;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
 }
 
-/* Structure rows */
+/* ============================================
+   CLAIM ROWS - Structure Page
+   ============================================ */
+
 .claim-row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-start;
-  padding: 12px;
-  border: 1px solid var(--border);
+  padding: 14px;
+  background: var(--bg-grouped);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  background: var(--panel);
 }
 
 .claim-index {
-  opacity: 0.7;
-  width: 26px;
+  color: var(--text-tertiary);
+  width: 28px;
   text-align: right;
-  padding-top: 8px;
+  padding-top: 10px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .claim-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
-/* Header right section */
-.header-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-}
+/* ============================================
+   PROFILE PICKER
+   ============================================ */
 
-/* Profile picker */
 .profile-picker {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 }
 
-.select--compact {
-  width: auto;
-  padding: 6px 10px;
-  font-size: 13px;
+.profile-picker .muted {
+  font-size: 14px;
 }
 
-/* Character counter */
+/* ============================================
+   CHARACTER COUNTER
+   ============================================ */
+
 .char-count {
-  font-size: 12px;
-  opacity: 0.7;
+  font-size: 13px;
+  color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
+  font-weight: 500;
 }
 
 .char-count--over {
-  color: #ef4444;
-  opacity: 1;
+  color: #ff453a;
   font-weight: 600;
+}
+
+/* ============================================
+   CHECKBOX - iOS Toggle Style
+   ============================================ */
+
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 44px;
+  height: 26px;
+  background: var(--bg-grouped);
+  border-radius: 13px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background: #fff;
+  border-radius: 11px;
+  top: 1px;
+  left: 1px;
+  transition: transform 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+input[type="checkbox"]:checked {
+  background: #30d158;
+  border-color: #30d158;
+}
+
+input[type="checkbox"]:checked::before {
+  transform: translateX(18px);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 600px) {
+  .app-shell {
+    padding: 16px;
+  }
+
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-right {
+    align-items: stretch;
+  }
+
+  .nav {
+    justify-content: center;
+  }
+
+  .main-card {
+    padding: 16px;
+  }
 }
