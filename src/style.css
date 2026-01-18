@@ -575,3 +575,153 @@ input[type="checkbox"]:checked::before {
     padding: 16px;
   }
 }
+
+/* ---------- Toast Notifications ---------- */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  opacity: 0;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.toast--visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.toast--success {
+  background: #1a3d1a;
+  border-color: #30d158;
+  color: #30d158;
+}
+
+.toast--error {
+  background: #3d1a1a;
+  border-color: #ff453a;
+  color: #ff453a;
+}
+
+.toast--info {
+  background: var(--bg-elevated);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------- Progress Indicator ---------- */
+.progress-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.progress-step--active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.progress-step--completed {
+  color: #30d158;
+}
+
+.progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bg-grouped);
+  border: 2px solid var(--text-tertiary);
+}
+
+.progress-step--active .progress-dot {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.progress-step--completed .progress-dot {
+  background: #30d158;
+  border-color: #30d158;
+}
+
+.progress-line {
+  flex: 1;
+  height: 2px;
+  background: var(--bg-grouped);
+  max-width: 40px;
+}
+
+.progress-line--completed {
+  background: #30d158;
+}
+
+/* ---------- Empty State ---------- */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-secondary);
+}
+
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.empty-state-description {
+  font-size: 14px;
+  margin-bottom: 24px;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---------- Error State ---------- */
+.error-state {
+  text-align: center;
+  padding: 24px;
+  background: #3d1a1a;
+  border: 1px solid #ff453a;
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+
+.error-state-title {
+  color: #ff453a;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.error-state-message {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 16px;
+}

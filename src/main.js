@@ -1,7 +1,8 @@
 // src/main.js
 import "./style.css";
+import { extractStateFromImport, createSessionExport } from "./schemas.js";
 
-// Inkwise v1.4 — Presets + Download Exports + Session Export/Import
+// Inkwise v2.0 — Fortune-500 Quality
 // Intent → Structure → Expression → Draft (LinkedIn-optimized)
 
 const STORAGE_KEY = "inkwise:v1";
@@ -405,10 +406,38 @@ function buildDraftText(baseText) {
   return baseText;
 }
 
+// ---------- Toast notifications ----------
+let toastTimeout = null;
+
+function showToast(message, type = "info") {
+  // Remove existing toast
+  const existing = document.querySelector(".toast");
+  if (existing) existing.remove();
+  if (toastTimeout) clearTimeout(toastTimeout);
+
+  const toast = document.createElement("div");
+  toast.className = `toast toast--${type}`;
+  toast.setAttribute("role", "alert");
+  toast.setAttribute("aria-live", "polite");
+  toast.textContent = message;
+
+  document.body.appendChild(toast);
+
+  // Trigger animation
+  requestAnimationFrame(() => {
+    toast.classList.add("toast--visible");
+  });
+
+  toastTimeout = setTimeout(() => {
+    toast.classList.remove("toast--visible");
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
 async function copyToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
-    alert("Copied to clipboard.");
+    showToast("Copied to clipboard!", "success");
   } catch {
     window.prompt("Copy this:", text);
   }
@@ -445,23 +474,28 @@ function downloadJsonFile(filename, obj) {
 
 // ---------- Session Export / Import ----------
 function exportSession() {
-  const payload = {
-    version: "inkwise:session:v1",
-    exportedAt: new Date().toISOString(),
-    state,
-  };
+  const payload = createSessionExport(state);
   downloadJsonFile(`inkwise_session_${fileStamp()}.json`, payload);
 }
 
 async function importSessionFromFile(file) {
   try {
     const text = await file.text();
-    replaceState(JSON.parse(text), { rerender: true });
+    const parsed = JSON.parse(text);
+    const result = extractStateFromImport(parsed);
+
+    if (!result.success) {
+      const errorResult = /** @type {{ success: false, error: string }} */ (result);
+      showToast(errorResult.error, "error");
+      return;
+    }
+
+    replaceState(result.data, { rerender: true });
     if (state.phase !== "draft") setPhase("draft");
-    alert("Session imported.");
+    showToast("Session imported successfully!", "success");
   } catch (err) {
     console.error(err);
-    alert("Import failed. Make sure this is a valid Inkwise session .json file.");
+    showToast("Import failed. Make sure this is a valid Inkwise session .json file.", "error");
   }
 }
 

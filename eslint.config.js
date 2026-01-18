@@ -18,6 +18,8 @@ export default [
         URL: "readonly",
         Blob: "readonly",
         setTimeout: "readonly",
+        clearTimeout: "readonly",
+        requestAnimationFrame: "readonly",
         console: "readonly",
       },
     },
