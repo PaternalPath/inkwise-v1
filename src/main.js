@@ -840,29 +840,32 @@ function renderIntent() {
 function renderStructure() {
   return `
     <h2 class="h2">Structure</h2>
-    <div class="muted">Turn intent into ordered claims.</div>
+    <div class="muted" id="structure-hint">Turn intent into ordered claims.</div>
 
     <div class="spacer-10"></div>
 
-    <div class="stack">
+    <div class="stack" role="list" aria-label="Claims">
       ${state.claims
         .map(
           (c, idx) => `
-          <div class="claim-row">
-            <div class="claim-index">${idx + 1}.</div>
+          <div class="claim-row" role="listitem">
+            <div class="claim-index" aria-hidden="true">${idx + 1}.</div>
 
+            <label for="claim-${c.id}" class="sr-only">Claim ${idx + 1}</label>
             <textarea
+              id="claim-${c.id}"
               data-field="claim"
               data-claim-id="${c.id}"
               placeholder="Claim (one clear point)"
               class="textarea textarea--h70"
               style="flex:1;"
+              aria-describedby="structure-hint"
             >${escapeHtml(c.text)}</textarea>
 
-            <div class="claim-actions">
-              <button data-action="move-claim" data-claim-id="${c.id}" data-dir="up" class="mini-btn">↑</button>
-              <button data-action="move-claim" data-claim-id="${c.id}" data-dir="down" class="mini-btn">↓</button>
-              <button data-action="remove-claim" data-claim-id="${c.id}" class="mini-btn mini-btn--ghost">✕</button>
+            <div class="claim-actions" role="group" aria-label="Claim ${idx + 1} actions">
+              <button data-action="move-claim" data-claim-id="${c.id}" data-dir="up" class="mini-btn" aria-label="Move claim ${idx + 1} up" ${idx === 0 ? "disabled" : ""}>↑</button>
+              <button data-action="move-claim" data-claim-id="${c.id}" data-dir="down" class="mini-btn" aria-label="Move claim ${idx + 1} down" ${idx === state.claims.length - 1 ? "disabled" : ""}>↓</button>
+              <button data-action="remove-claim" data-claim-id="${c.id}" class="mini-btn mini-btn--ghost" aria-label="Remove claim ${idx + 1}">✕</button>
             </div>
           </div>
         `
@@ -872,7 +875,7 @@ function renderStructure() {
 
     <div class="row" style="margin-top:12px;">
       <button data-action="add-claim" class="btn">+ Add claim</button>
-      <button data-action="continue" data-next="expression" class="btn">Continue to Expression →</button>
+      <button data-action="continue" data-next="expression" class="btn btn--primary">Continue to Expression →</button>
     </div>
   `;
 }
@@ -897,7 +900,7 @@ function renderExpression() {
 
   return `
     <h2 class="h2">Expression</h2>
-    <div class="muted">Write the paragraphs that support your ordered claims.</div>
+    <div class="muted" id="expression-hint">Write the paragraphs that support your ordered claims.</div>
 
     <div class="spacer-10"></div>
 
@@ -907,12 +910,14 @@ function renderExpression() {
           const current = state.expressions[c.id] || "";
           return `
             <div class="panel">
-              <div class="panel-title--700">${idx + 1}. ${escapeHtml(c.text)}</div>
+              <label for="expr-${c.id}" class="panel-title--700">${idx + 1}. ${escapeHtml(c.text)}</label>
               <textarea
+                id="expr-${c.id}"
                 data-field="expression"
                 data-claim-id="${c.id}"
                 placeholder="Write this as a clean paragraph…"
                 class="textarea textarea--h110"
+                aria-describedby="expression-hint"
               >${escapeHtml(current)}</textarea>
             </div>
           `;
@@ -921,7 +926,7 @@ function renderExpression() {
     </div>
 
     <div class="row" style="margin-top:12px;">
-      <button data-action="continue" data-next="draft" class="btn">Continue to Draft →</button>
+      <button data-action="continue" data-next="draft" class="btn btn--primary">Continue to Draft →</button>
     </div>
   `;
 }
