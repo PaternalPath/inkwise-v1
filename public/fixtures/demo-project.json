@@ -1,0 +1,49 @@
+{
+  "version": "inkwise:session:v1",
+  "exportedAt": "2025-01-18T00:00:00.000Z",
+  "state": {
+    "phase": "draft",
+    "intent": "The best writing tools don't write for you—they help you think more clearly.",
+    "claims": [
+      {
+        "id": "demo-claim-1",
+        "text": "Most writing tools optimize for output speed, not thinking quality."
+      },
+      {
+        "id": "demo-claim-2",
+        "text": "A structured workflow separates idea generation from editing."
+      },
+      {
+        "id": "demo-claim-3",
+        "text": "The real bottleneck in writing is clarity of thought, not typing speed."
+      }
+    ],
+    "expressions": {
+      "demo-claim-1": "There's a reason blank pages feel intimidating: most tools expect you to go from zero to polished draft in one pass. That approach rewards typing speed over thinking quality. The result? More words, less clarity.",
+      "demo-claim-2": "Separating intent from structure from expression gives each phase room to breathe. You can't edit what you haven't written—but you also can't write clearly without knowing what you're trying to say. A phased approach prevents premature optimization.",
+      "demo-claim-3": "The bottleneck was never typing speed. It's knowing what to say next. When you start with a clear intent and ordered claims, the paragraphs almost write themselves. Structure unlocks flow."
+    },
+    "outputProfile": "linkedin",
+    "ui": {
+      "presetId": "demo"
+    },
+    "linkedin": {
+      "hookOverride": "",
+      "includeBullets": true,
+      "bulletIntro": "Three shifts that changed how I write:",
+      "maxBullets": 3,
+      "includeCTA": true,
+      "ctaText": "What helps you think more clearly when writing?",
+      "includeHashtags": false,
+      "hashtags": "#writing #productivity #clarity",
+      "includeSignature": false,
+      "signature": "— Built with Inkwise"
+    },
+    "metadata": {
+      "id": "demo-project",
+      "title": "Demo: Writing Tools",
+      "createdAt": "2025-01-18T00:00:00.000Z",
+      "updatedAt": "2025-01-18T00:00:00.000Z"
+    }
+  }
+}

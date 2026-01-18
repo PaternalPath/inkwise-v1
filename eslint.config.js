@@ -20,6 +20,7 @@ export default [
         setTimeout: "readonly",
         clearTimeout: "readonly",
         requestAnimationFrame: "readonly",
+        fetch: "readonly",
         console: "readonly",
       },
     },

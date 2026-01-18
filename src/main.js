@@ -613,6 +613,138 @@ function applyPreset(presetId) {
   );
 }
 
+// ---------- Demo Project ----------
+async function loadDemoProject() {
+  try {
+    const response = await fetch("/fixtures/demo-project.json");
+    if (!response.ok) throw new Error("Failed to load demo project");
+
+    const data = await response.json();
+    const result = extractStateFromImport(data);
+
+    if (!result.success) {
+      const errorResult = /** @type {{ success: false, error: string }} */ (result);
+      showToast(errorResult.error, "error");
+      return;
+    }
+
+    replaceState(result.data, { rerender: true });
+    showToast("Demo project loaded! Explore the workflow.", "success");
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to load demo project.", "error");
+  }
+}
+
+// ---------- Progress Indicator ----------
+function renderProgress() {
+  const phases = [
+    { key: "intent", label: "Intent" },
+    { key: "structure", label: "Structure" },
+    { key: "expression", label: "Expression" },
+    { key: "draft", label: "Draft" },
+  ];
+
+  const currentIndex = phases.findIndex((p) => p.key === state.phase);
+
+  return `
+    <div class="progress-bar" role="navigation" aria-label="Workflow progress">
+      ${phases
+        .map((p, i) => {
+          const isActive = i === currentIndex;
+          const isCompleted = i < currentIndex;
+          const stepClass = isActive ? "progress-step--active" : isCompleted ? "progress-step--completed" : "";
+          const lineClass = isCompleted ? "progress-line--completed" : "";
+
+          return `
+            <button
+              class="progress-step ${stepClass}"
+              data-action="set-phase"
+              data-phase="${p.key}"
+              aria-current="${isActive ? "step" : "false"}"
+            >
+              <span class="progress-dot"></span>
+              <span>${escapeHtml(p.label)}</span>
+            </button>
+            ${i < phases.length - 1 ? `<div class="progress-line ${lineClass}"></div>` : ""}
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+// ---------- Empty State ----------
+function isFirstTimeUser() {
+  // Check if user has any content
+  const hasIntent = state.intent.trim().length > 0;
+  const hasClaims = state.claims.some((c) => c.text.trim().length > 0);
+  const hasExpressions = Object.values(state.expressions).some((e) => e.trim().length > 0);
+  return !hasIntent && !hasClaims && !hasExpressions;
+}
+
+function renderEmptyState() {
+  return `
+    <div class="empty-state">
+      <div class="empty-state-icon">&#9998;</div>
+      <div class="empty-state-title">Welcome to Inkwise</div>
+      <div class="empty-state-description">
+        Transform rough ideas into polished drafts using a structured workflow:
+        Intent → Structure → Expression → Draft
+      </div>
+      <div class="row" style="justify-content: center; gap: 12px;">
+        <button data-action="load-demo" class="btn btn--primary">Load Demo Project</button>
+        <button data-action="start-fresh" class="btn">Start Fresh</button>
+      </div>
+    </div>
+  `;
+}
+
+// ---------- Export Functions ----------
+function buildMarkdownExport() {
+  const intent = (state.intent || "").trim();
+  const claims = getCleanClaims();
+  const paragraphs = getCleanParagraphs(claims);
+
+  const lines = [];
+
+  if (intent) {
+    lines.push(`# ${intent}`);
+    lines.push("");
+  }
+
+  if (claims.length && paragraphs.length) {
+    claims.forEach((c, i) => {
+      lines.push(`## ${c.text}`);
+      lines.push("");
+      if (paragraphs[i]) {
+        lines.push(paragraphs[i]);
+        lines.push("");
+      }
+    });
+  } else if (claims.length) {
+    claims.forEach((c) => {
+      lines.push(`- ${c.text}`);
+    });
+    lines.push("");
+  }
+
+  return lines.join("\n").trim();
+}
+
+function downloadMarkdown() {
+  const md = buildMarkdownExport();
+  const profileKey = state.outputProfile || "linkedin";
+  downloadTextFile(`inkwise_${profileKey}_${fileStamp()}.md`, md);
+  showToast("Markdown downloaded!", "success");
+}
+
+function exportProjectJson() {
+  const payload = createSessionExport(state);
+  downloadJsonFile(`inkwise_project_${fileStamp()}.json`, payload);
+  showToast("Project exported!", "success");
+}
+
 // ---------- UI ----------
 function navButton(phase, label) {
   const active = state.phase === phase;
@@ -665,31 +797,41 @@ function pageShell(contentHtml) {
       </header>
 
       <main class="main-card">
+        ${renderProgress()}
         ${contentHtml}
       </main>
 
       <footer class="footer-tip">
-        Tip: Keep Terminal running with <code class="code-pill">npm run dev</code>
+        Local-first: Your data stays in your browser. No account required.
       </footer>
     </div>
   `;
 }
 
 function renderIntent() {
+  // Show empty state for first-time users
+  if (isFirstTimeUser() && state.phase === "intent") {
+    return renderEmptyState();
+  }
+
   return `
     <h2 class="h2">Intent</h2>
-    <div class="muted">Define what you're trying to say before you say it.</div>
+    <div class="muted" id="intent-hint">Define what you're trying to say before you say it.</div>
 
     <div class="spacer-10"></div>
 
+    <label for="intent-input" class="sr-only">Your intent</label>
     <textarea
+      id="intent-input"
       data-field="intent"
       placeholder="What are you trying to say?"
       class="textarea textarea--h130"
+      aria-describedby="intent-hint"
     >${escapeHtml(state.intent)}</textarea>
 
     <div class="row" style="margin-top:12px;">
-      <button data-action="continue" data-next="structure" class="btn">Continue to Structure →</button>
+      <button data-action="continue" data-next="structure" class="btn btn--primary">Continue to Structure →</button>
+      <button data-action="load-demo" class="btn btn--ghost">Load Demo</button>
       <button data-action="reset" class="btn btn--ghost">Reset</button>
     </div>
   `;
@@ -829,14 +971,26 @@ function renderDraft() {
 
         <div class="divider"></div>
 
-        <div class="panel-title">Session Backup</div>
+        <div class="panel-title">Export Options</div>
+        <div class="row" style="flex-wrap: wrap;">
+          <button data-action="copy-draft" class="btn" ${!hasContent ? "disabled" : ""}>Copy Text</button>
+          <button data-action="download-draft" class="btn" ${!hasContent ? "disabled" : ""}>Download .txt</button>
+          <button data-action="download-md" class="btn" ${!hasContent ? "disabled" : ""}>Download .md</button>
+          <button data-action="export-project" class="btn">Export Project</button>
+        </div>
+        <div class="muted-sm" style="margin-top:10px;">
+          Copy or download your draft. Export Project saves everything for later import.
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="panel-title">Import</div>
         <div class="row">
-          <button data-action="export-session" class="btn">Export Session (.json)</button>
-          <button data-action="import-session" class="btn">Import Session (.json)</button>
+          <button data-action="import-session" class="btn">Import Project (.json)</button>
           <input type="file" accept="application/json" data-field="session-file" style="display:none;" />
         </div>
         <div class="muted-sm" style="margin-top:10px;">
-          Export saves everything. Import restores it.
+          Restore a previously exported project.
         </div>
 
         ${
@@ -980,16 +1134,38 @@ root.addEventListener("click", async (e) => {
 
   if (action === "download-draft") {
     const profileKey = state.outputProfile || "linkedin";
-    return downloadTextFile(`inkwise_${profileKey}_${fileStamp()}.txt`, buildDraftText(buildLinkedInDraft()));
+    downloadTextFile(`inkwise_${profileKey}_${fileStamp()}.txt`, buildDraftText(buildLinkedInDraft()));
+    showToast("Text file downloaded!", "success");
+    return;
   }
-  if (action === "download-full") return downloadTextFile(`inkwise_breakdown_${fileStamp()}.txt`, buildFullBreakdown());
+  if (action === "download-full") {
+    downloadTextFile(`inkwise_breakdown_${fileStamp()}.txt`, buildFullBreakdown());
+    showToast("Breakdown downloaded!", "success");
+    return;
+  }
+  if (action === "download-md") return downloadMarkdown();
 
   if (action === "export-session") return exportSession();
+  if (action === "export-project") return exportProjectJson();
 
   if (action === "import-session") {
     /** @type {HTMLInputElement | null} */
     const input = root.querySelector('input[data-field="session-file"]');
     if (input) input.click();
+    return;
+  }
+
+  if (action === "load-demo") return loadDemoProject();
+
+  if (action === "start-fresh") {
+    // Dismiss empty state and start writing
+    setState({ intent: "" }, { rerender: true });
+    // Focus the intent textarea
+    setTimeout(() => {
+      const textarea = document.getElementById("intent-input");
+      if (textarea) textarea.focus();
+    }, 50);
+    return;
   }
 });
 
