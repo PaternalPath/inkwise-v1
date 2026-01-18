@@ -917,7 +917,8 @@ function escapeHtml(value) {
 
 // ---------- events ----------
 root.addEventListener("click", async (e) => {
-  const target = e.target.closest("[data-action]");
+  /** @type {HTMLElement | null} */
+  const target = /** @type {HTMLElement} */ (e.target).closest("[data-action]");
   if (!target) return;
 
   const action = target.dataset.action;
@@ -952,13 +953,15 @@ root.addEventListener("click", async (e) => {
   if (action === "export-session") return exportSession();
 
   if (action === "import-session") {
+    /** @type {HTMLInputElement | null} */
     const input = root.querySelector('input[data-field="session-file"]');
     if (input) input.click();
   }
 });
 
 root.addEventListener("input", (e) => {
-  const el = e.target;
+  /** @type {HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement} */
+  const el = /** @type {HTMLInputElement} */ (e.target);
   const field = el.dataset.field;
 
   if (field === "intent") return updateIntent(el.value);
@@ -979,10 +982,11 @@ root.addEventListener("input", (e) => {
 });
 
 root.addEventListener("change", async (e) => {
-  const el = e.target;
+  /** @type {HTMLInputElement | HTMLSelectElement} */
+  const el = /** @type {HTMLInputElement} */ (e.target);
 
   // Handle output profile dropdown
-  if (el?.dataset?.action === "set-output-profile") {
+  if (el.dataset?.action === "set-output-profile") {
     setState({ outputProfile: el.value });
     return;
   }
@@ -991,17 +995,22 @@ root.addEventListener("change", async (e) => {
   if (!field) return;
 
   if (field === "session-file") {
-    const file = el.files && el.files[0];
-    el.value = "";
+    const inputEl = /** @type {HTMLInputElement} */ (el);
+    const file = inputEl.files && inputEl.files[0];
+    inputEl.value = "";
     if (!file) return;
     await importSessionFromFile(file);
     return;
   }
 
-  if (field === "li-includeBullets") return updateLinkedInField("includeBullets", !!el.checked, { rerender: true });
-  if (field === "li-includeCTA") return updateLinkedInField("includeCTA", !!el.checked, { rerender: true });
-  if (field === "li-includeHashtags") return updateLinkedInField("includeHashtags", !!el.checked, { rerender: true });
-  if (field === "li-includeSignature") return updateLinkedInField("includeSignature", !!el.checked, { rerender: true });
+  const checkboxEl = /** @type {HTMLInputElement} */ (el);
+  if (field === "li-includeBullets")
+    return updateLinkedInField("includeBullets", !!checkboxEl.checked, { rerender: true });
+  if (field === "li-includeCTA") return updateLinkedInField("includeCTA", !!checkboxEl.checked, { rerender: true });
+  if (field === "li-includeHashtags")
+    return updateLinkedInField("includeHashtags", !!checkboxEl.checked, { rerender: true });
+  if (field === "li-includeSignature")
+    return updateLinkedInField("includeSignature", !!checkboxEl.checked, { rerender: true });
 });
 
 render();
