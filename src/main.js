@@ -1,6 +1,7 @@
 // src/main.js
 import "./style.css";
 import { extractStateFromImport, createSessionExport } from "./schemas.js";
+import { OUTPUT_PROFILES, clampInt, splitIntoThread, escapeHtml } from "./utils.js";
 
 // Inkwise v2.0 — Fortune-500 Quality
 // Intent → Structure → Expression → Draft (LinkedIn-optimized)
@@ -25,47 +26,6 @@ const fileStamp = () => {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}_${pad2(d.getHours())}${pad2(
     d.getMinutes()
   )}${pad2(d.getSeconds())}`;
-};
-
-function clampInt(value, min, max, fallback) {
-  const n = parseInt(value, 10);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, n));
-}
-
-// ---------- Output Profiles ----------
-const OUTPUT_PROFILES = {
-  linkedin: {
-    label: "LinkedIn Post",
-    maxChars: 3000,
-    hint: "Short hook, whitespace, skimmable.",
-  },
-  xthread: {
-    label: "X / Twitter Thread",
-    maxChars: 25000,
-    chunkSize: 280,
-    hint: "Split into numbered posts (1/n).",
-  },
-  email: {
-    label: "Email",
-    maxChars: 20000,
-    hint: "Subject + body.",
-  },
-  memo: {
-    label: "Memo",
-    maxChars: 20000,
-    hint: "Title, TL;DR, bullets, next steps.",
-  },
-  blog: {
-    label: "Blog / Article",
-    maxChars: 100000,
-    hint: "Headings + longer paragraphs.",
-  },
-  custom: {
-    label: "Custom",
-    maxChars: 20000,
-    hint: "Your rules.",
-  },
 };
 
 // ---------- state ----------
@@ -338,26 +298,6 @@ function buildFullBreakdown() {
 }
 
 // ---------- Profile-aware draft formatting ----------
-function splitIntoThread(text, size = 280) {
-  const chunks = [];
-  let remaining = text.trim();
-
-  while (remaining.length > size) {
-    // Try to break on a newline or space
-    let cut = remaining.lastIndexOf("\n", size);
-    if (cut < 120) cut = remaining.lastIndexOf(" ", size);
-    if (cut < 120) cut = size;
-
-    chunks.push(remaining.slice(0, cut).trim());
-    remaining = remaining.slice(cut).trim();
-  }
-  if (remaining) chunks.push(remaining);
-
-  // Add numbering (1/n format)
-  const n = chunks.length;
-  return chunks.map((c, i) => `${i + 1}/${n}\n${c}`);
-}
-
 function buildDraftText(baseText) {
   const profile = state.outputProfile;
   const p = OUTPUT_PROFILES[profile];
@@ -1096,16 +1036,6 @@ function renderPhase() {
 
 function render() {
   root.innerHTML = pageShell(renderPhase());
-}
-
-// ---------- helpers ----------
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 // ---------- events ----------
