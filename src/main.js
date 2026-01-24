@@ -5,6 +5,49 @@ import { extractStateFromImport, createSessionExport } from "./schemas.js";
 // Inkwise v2.0 — Fortune-500 Quality
 // Intent → Structure → Expression → Draft (LinkedIn-optimized)
 
+// ---------- Structured Logger ----------
+const logger = {
+  _format(level, message, context) {
+    const timestamp = new Date().toISOString();
+    const ctx = context ? ` ${JSON.stringify(context)}` : "";
+    return `[${timestamp}] ${level}: ${message}${ctx}`;
+  },
+  info(message, context) {
+    console.info(this._format("INFO", message, context));
+  },
+  warn(message, context) {
+    console.warn(this._format("WARN", message, context));
+  },
+  error(message, context) {
+    console.error(this._format("ERROR", message, context));
+  },
+};
+
+// ---------- Global Error Handler ----------
+window.addEventListener("error", (event) => {
+  logger.error("Uncaught error", {
+    message: event.message,
+    filename: event.filename,
+    lineno: event.lineno,
+    colno: event.colno,
+  });
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  logger.error("Unhandled promise rejection", {
+    reason: String(event.reason),
+  });
+});
+
+// ---------- Debounce Utility ----------
+function debounce(fn, delay) {
+  let timeoutId;
+  return function (...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
 const STORAGE_KEY = "inkwise:v1";
 const root = document.querySelector("#app");
 
@@ -156,9 +199,15 @@ function loadState() {
 
 let state = loadState();
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function saveStateImmediate() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (err) {
+    logger.error("Failed to save state to localStorage", { error: String(err) });
+  }
 }
+
+const saveState = debounce(saveStateImmediate, 300);
 
 function setState(patch, { rerender = true } = {}) {
   state = { ...state, ...patch };
