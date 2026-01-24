@@ -23,6 +23,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Security audit
+        run: npm audit --audit-level=high
+
       - name: Run linter
         run: npm run lint
 
@@ -37,6 +40,17 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Check bundle size
+        run: |
+          MAX_SIZE_KB=100
+          DIST_SIZE=$(du -sk dist | cut -f1)
+          echo "Bundle size: ${DIST_SIZE}KB (max: ${MAX_SIZE_KB}KB)"
+          if [ "$DIST_SIZE" -gt "$MAX_SIZE_KB" ]; then
+            echo "::error::Bundle size ${DIST_SIZE}KB exceeds limit of ${MAX_SIZE_KB}KB"
+            exit 1
+          fi
+          echo "::notice::Bundle size OK: ${DIST_SIZE}KB"
 
   e2e-tests:
     runs-on: ubuntu-latest
@@ -71,3 +85,33 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-and-test, e2e-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: "--prod"
+          working-directory: ./
